@@ -6,6 +6,7 @@ from config import platform_long_names
 import shutil
 import os
 import stat
+from config import project_configurations
 
 __author__ = "Ryan Sheffer"
 __copyright__ = "Copyright 2018, Ryan Sheffer Open Source"
@@ -39,6 +40,10 @@ class Package(Action):
         self.maps = kwargs['maps'] if 'maps' in kwargs else []
         self.cook_dirs = kwargs['cook_dirs'] if 'cook_dirs' in kwargs else []
         self.cook_output_dir = kwargs['cook_output_dir'] if 'cook_output_dir' in kwargs else ''
+        self.configuration = kwargs["configuration"] if "configuration" in kwargs else config.configuration
+        self.unversionedcookedcontent = \
+            kwargs["unversionedcookedcontent"] if "unversionedcookedcontent" in kwargs else False
+        self.cmdline = kwargs["cmdline"] if "cmdline" in kwargs else ''
 
         # Control the pipeline
         self.build = kwargs['build'] if 'build' in kwargs else True
@@ -60,6 +65,9 @@ class Package(Action):
     def verify(self):
         if not self.config.check_environment():
             return 'Environment is not ready for building or packaging!'
+
+        if self.configuration not in project_configurations:
+            return 'Cannot build package because configuration "{}" is invalid!'.format(self.configuration)
 
         valid_build_types = ['standalone', 'client', 'server']
         if self.build_type not in valid_build_types:
@@ -113,9 +121,9 @@ class Package(Action):
 
         build_blacklist_file_path = os.path.join(self.config.uproject_dir_path,
                                                  self.build_blacklist_dir.format(self.config.platform),
-                                                 self.blacklist_file_name.format(self.config.configuration))
+                                                 self.blacklist_file_name.format(self.configuration))
         if self.content_black_list != '':
-            print_action('Setting up content blacklist for configuration {}'.format(self.config.configuration))
+            print_action('Setting up content blacklist for configuration {}'.format(self.configuration))
             if os.path.isfile(build_blacklist_file_path):
                 os.unlink(build_blacklist_file_path)
             os.makedirs(os.path.join(self.config.uproject_dir_path,
@@ -127,8 +135,8 @@ class Package(Action):
                     'BuildCookRun', '-NoHotReload', '-nop4',
                     '-project={}'.format(self.config.uproject_file_path),
                     '-archivedirectory={}'.format(self.config.builds_path),
-                    '-clientconfig={}'.format(self.config.configuration),
-                    '-serverconfig={}'.format(self.config.configuration),
+                    '-clientconfig={}'.format(self.configuration),
+                    '-serverconfig={}'.format(self.configuration),
                     '-ue4exe={}'.format('UE4Editor-Win64-Debug-Cmd.exe' if self.config.debug else
                                         'UE4Editor-Cmd.exe'),
                     '-prereqs', '-targetplatform={}'.format(self.config.platform),
@@ -170,6 +178,10 @@ class Package(Action):
             cmd_args.append('-SkipCookingEditorContent')
         if self.ignore_cook_errors:
             cmd_args.append('-IgnoreCookErrors')
+        if self.unversionedcookedcontent:
+            cmd_args.append('-unversionedcookedcontent')
+        if len(self.cmdline) != 0:
+            cmd_args.append('-cmdline=" {}"'.format(self.cmdline))
 
         if len(self.cook_output_dir) > 0:
             cmd_args.append('-CookOutputDir={}'.format(os.path.join(self.config.uproject_dir_path,

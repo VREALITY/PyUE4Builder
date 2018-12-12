@@ -5,6 +5,7 @@ import stat
 import shutil
 from actions.action import Action
 from utility.common import get_visual_studio_version, launch, print_action
+from config import project_configurations
 
 __author__ = "Ryan Sheffer"
 __copyright__ = "Copyright 2018, Ryan Sheffer Open Source"
@@ -21,6 +22,7 @@ class Build(Action):
         self.build_name = kwargs['build_name'] if 'build_name' in kwargs else ''
         self.build_names = kwargs['build_names'] if 'build_names' in kwargs else ''
         self.force_clean = kwargs["force_clean"] if "force_clean" in kwargs else False
+        self.configuration = kwargs["configuration"] if "configuration" in kwargs else config.configuration
 
     @staticmethod
     def get_arg_docs():
@@ -36,6 +38,9 @@ class Build(Action):
 
         if self.config.editor_running:
             return 'Cannot build "{}" because editor is running!'.format(self.build_name)
+
+        if self.configuration not in project_configurations:
+            return 'Cannot build "{}" because configuration "{}" is invalid!'.format(self.build_name, self.configuration)
         return ''
 
     def run(self):
@@ -55,7 +60,7 @@ class Build(Action):
 
         print_action('{} {}'.format('Building' if not self.config.clean else 'Cleaning', build_name))
 
-        cmd_args = [build_name, self.config.platform, self.config.configuration]
+        cmd_args = [build_name, self.config.platform, self.configuration]
         if is_game_project:
             cmd_args.append(self.config.uproject_file_path)
         cmd_args += ['-NoHotReload', '-waitmutex']

@@ -52,7 +52,7 @@ is_automated = os.environ.get("PYUE4BUILDER_AUTOMATED", "0") == "1"
               type=click.Choice(project_configurations),
               default='Development',
               show_default=True,
-              help="Build configuration, e.g. Shipping")
+              help="The global build configuration, e.g. Shipping.. This is overridable in build and package actions.")
 @click.option('--script', '-s',
               type=click.STRING,
               required=True,
